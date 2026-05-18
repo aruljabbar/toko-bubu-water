@@ -21,6 +21,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/request" className="px-4 py-2 rounded-md hover:bg-slate-800 transition">
             📝 Request Pelanggan
           </Link>
+          <Link href="/admin/opname" className="px-4 py-2 rounded-md hover:bg-slate-800 transition">
+            📋 Audit Stok
+          </Link>
         </nav>
 
         <div className="mt-auto text-xs text-slate-500">

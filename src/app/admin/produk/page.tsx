@@ -16,6 +16,16 @@ export default async function HalamanProdukAdmin() {
       <div className="bg-white p-6 rounded-lg shadow-md border">
         <h2 className="text-lg font-semibold mb-4">Tambah Produk Baru</h2>
         <form action={tambahProduk} className="space-y-4">
+          {/* Letakkan di atas atau di bawah input Nama Produk */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Scan Barcode (Opsional)</label>
+            <input 
+              type="text" 
+              name="barcode" 
+              className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-yellow-50 focus:bg-white" 
+              placeholder="Arahkan kursor ke sini, lalu scan barangnya..." 
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Nama Produk</label>
             <input type="text" name="namaProduk" required className="mt-1 block w-full border border-gray-300 rounded-md p-2" placeholder="Cth: Indomie Goreng" />

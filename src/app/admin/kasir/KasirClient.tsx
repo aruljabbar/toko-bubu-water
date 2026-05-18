@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react';
-import { prosesCheckout } from '../../../actions/kasir'; // Import fungsi backend
+import { useState, useEffect } from 'react';
+import { prosesCheckout } from '../../../actions/kasir';
 
 type Produk = {
   id: number;
+  barcode: string | null; // Tambahkan tipe barcode
   namaProduk: string;
   harga: number;
   stok: number;
@@ -15,19 +16,19 @@ type ItemKeranjang = Produk & { kuantitas: number };
 export default function KasirClient({ daftarProduk }: { daftarProduk: Produk[] }) {
   const [keranjang, setKeranjang] = useState<ItemKeranjang[]>([]);
   const [nomorHp, setNomorHp] = useState('');
-  const [loading, setLoading] = useState(false); // Untuk animasi loading saat diproses
+  const [loading, setLoading] = useState(false);
 
+  // --- FUNGSI TAMBAH KE KERANJANG (Diperbarui sedikit agar bisa dipanggil oleh scanner) ---
   const tambahKeKeranjang = (produk: Produk) => {
-    // Cek apakah stok cukup
-    const itemDiKeranjang = keranjang.find((item) => item.id === produk.id);
-    const qtySekarang = itemDiKeranjang ? itemDiKeranjang.kuantitas : 0;
-    
-    if (qtySekarang >= produk.stok) {
-      alert('Stok tidak mencukupi!');
-      return;
-    }
-
     setKeranjang((prev) => {
+      const itemDiKeranjang = prev.find((item) => item.id === produk.id);
+      const qtySekarang = itemDiKeranjang ? itemDiKeranjang.kuantitas : 0;
+      
+      if (qtySekarang >= produk.stok) {
+        alert(`Stok ${produk.namaProduk} tidak mencukupi!`);
+        return prev; // Batalkan penambahan
+      }
+
       if (itemDiKeranjang) {
         return prev.map((item) =>
           item.id === produk.id ? { ...item, kuantitas: item.kuantitas + 1 } : item
@@ -37,9 +38,52 @@ export default function KasirClient({ daftarProduk }: { daftarProduk: Produk[] }
     });
   };
 
-  const totalBelanja = keranjang.reduce((total, item) => total + (item.harga * item.kuantitas), 0);
+  // --- LOGIKA BARCODE SCANNER ---
+  useEffect(() => {
+    let buffer = '';
+    let timer: NodeJS.Timeout;
 
-  // FUNGSI EKSEKUSI PEMBAYARAN
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Jika user sedang mengetik di input Nomor HP, abaikan scanner
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Jika tombol yang ditekan adalah huruf/angka (panjangnya 1 karakter)
+      if (e.key.length === 1) {
+        buffer += e.key;
+        
+        clearTimeout(timer);
+        // Barcode scanner mengetik sangat cepat (biasanya jarak antar huruf < 30ms)
+        // Jika jeda lebih dari 50ms, kita anggap itu ketikan manual dan buffer dikosongkan
+        timer = setTimeout(() => {
+          buffer = ''; 
+        }, 50); 
+      } 
+      // Jika tombol Enter ditekan dan buffer memiliki isi
+      else if (e.key === 'Enter' && buffer.length > 0) {
+        e.preventDefault();
+        const scannedCode = buffer;
+        buffer = ''; // Kosongkan buffer untuk scan berikutnya
+
+        // Cari produk berdasarkan barcode
+        const produkDitemukan = daftarProduk.find(p => p.barcode === scannedCode);
+        
+        if (produkDitemukan) {
+          tambahKeKeranjang(produkDitemukan);
+          // Opsi tambahan: Anda bisa menambahkan suara 'beep' pakai HTML Audio Element di sini
+        } else {
+          console.log(`Barcode ${scannedCode} tidak terdaftar.`);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [daftarProduk]); // Daftar produk menjadi dependency agar data selalu update
+  // --------------------------------
+
+  const totalBelanja = keranjang.reduce((total, item) => total + (item.harga * item.kuantitas), 0);
   const handleCheckout = async () => {
     setLoading(true);
     try {
@@ -48,10 +92,9 @@ export default function KasirClient({ daftarProduk }: { daftarProduk: Produk[] }
         totalBelanja: totalBelanja,
         keranjang: keranjang,
       });
-      
       alert('Transaksi Berhasil Disimpan!');
-      setKeranjang([]); // Kosongkan keranjang
-      setNomorHp(''); // Kosongkan input nomor HP
+      setKeranjang([]); 
+      setNomorHp(''); 
     } catch (error) {
       alert('Terjadi kesalahan saat menyimpan transaksi.');
     } finally {
@@ -59,10 +102,62 @@ export default function KasirClient({ daftarProduk }: { daftarProduk: Produk[] }
     }
   };
 
+  // --- FUNGSI BARU: CETAK STRUK BLUETOOTH ---
+  const handleCetakStruk = async () => {
+    if (keranjang.length === 0) return alert('Keranjang masih kosong!');
+
+    try {
+      // 1. Meminta izin ke browser untuk mencari perangkat Bluetooth (Printer)
+      // UUID 000018f0... adalah standar umum untuk banyak printer thermal mini
+      const device = await (navigator as any).bluetooth.requestDevice({
+        // filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }],
+        // optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+        acceptAllDevices: true // Jika ingin memperbolehkan semua perangkat (tidak disarankan untuk produksi)
+      });
+
+      // 2. Membuka koneksi ke printer
+      const server = await device.gatt?.connect();
+      const service = await server?.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+      const characteristic = await service?.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb'); // Karakteristik untuk 'write'
+
+      if (!characteristic) throw new Error("Karakteristik printer tidak ditemukan");
+
+      // 3. Merangkai teks struk
+      let teksStruk = "      TOKO BUBU\n";
+      teksStruk += "================================\n";
+      keranjang.forEach(item => {
+        teksStruk += `${item.namaProduk}\n`;
+        teksStruk += `${item.kuantitas} x ${item.harga} = Rp${item.kuantitas * item.harga}\n`;
+      });
+      teksStruk += "================================\n";
+      teksStruk += `TOTAL: Rp${totalBelanja}\n`;
+      teksStruk += `No HP: ${nomorHp || '-'}\n`;
+      teksStruk += "================================\n";
+      teksStruk += "  Terima kasih telah berbelanja\n\n\n\n";
+
+      // 4. Konversi teks ke byte array (Uint8Array) lalu kirim ke printer
+      const encoder = new TextEncoder();
+      const data = encoder.encode(teksStruk);
+      
+      // Printer Bluetooth punya batas buffer (biasanya 512 bytes), kita pecah potongannya
+      const chunkSize = 100;
+      for (let i = 0; i < data.length; i += chunkSize) {
+        const chunk = data.slice(i, i + chunkSize);
+        await characteristic.writeValue(chunk);
+      }
+
+      alert("Struk berhasil dicetak!");
+
+    } catch (error) {
+      console.error(error);
+      alert("Gagal mencetak struk. Pastikan Bluetooth aktif dan printer menyala.");
+    }
+  };
+  // ------------------------------------------
+
   return (
     <div className="flex gap-6 p-8 min-h-screen bg-gray-50">
       
-      {/* KIRI: Daftar Produk (Kode sama seperti sebelumnya) */}
       <div className="w-2/3">
         <h1 className="text-2xl font-bold mb-6">Kasir Toko Bubu</h1>
         <div className="grid grid-cols-3 gap-4">
@@ -80,7 +175,6 @@ export default function KasirClient({ daftarProduk }: { daftarProduk: Produk[] }
         </div>
       </div>
 
-      {/* KANAN: Keranjang & Pembayaran */}
       <div className="w-1/3 bg-white p-6 rounded-lg shadow border h-fit sticky top-8">
         <h2 className="text-xl font-bold mb-4 border-b pb-2">Keranjang</h2>
         
@@ -121,13 +215,23 @@ export default function KasirClient({ daftarProduk }: { daftarProduk: Produk[] }
             />
           </div>
 
-          <button 
-            onClick={handleCheckout} // Panggil fungsi checkout saat diklik
-            className={`w-full py-3 rounded font-bold text-white transition ${keranjang.length === 0 || loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
-            disabled={keranjang.length === 0 || loading}
-          >
-            {loading ? 'Memproses...' : `Bayar & Simpan (Rp ${totalBelanja.toLocaleString('id-ID')})`}
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleCetakStruk} 
+              className={`flex-1 py-3 rounded font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 transition ${keranjang.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={keranjang.length === 0}
+            >
+              🖨️ Cetak Struk
+            </button>
+
+            <button 
+              onClick={handleCheckout} 
+              className={`flex-1 py-3 rounded font-bold text-white transition ${keranjang.length === 0 || loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+              disabled={keranjang.length === 0 || loading}
+            >
+              {loading ? 'Memproses...' : 'Simpan & Selesai'}
+            </button>
+          </div>
         </div>
       </div>
 

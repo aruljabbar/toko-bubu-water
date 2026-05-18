@@ -10,9 +10,10 @@ export const customers = pgTable('customers', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-// Tabel Produk
+// Tabel Produk (Update)
 export const products = pgTable('products', {
   id: serial('id').primaryKey(),
+  barcode: text('barcode').unique(), // TAMBAHAN: Kolom barcode (opsional & unik)
   namaProduk: text('nama_produk').notNull(),
   kategori: text('kategori'),
   harga: integer('harga').notNull(),
@@ -49,5 +50,16 @@ export const productRequests = pgTable('product_requests', {
   gambarUrl: text('gambar_url'), // Link gambar dari Supabase Storage
   status: text('status').notNull().default('pending'), // 'pending', 'diterima', 'ditolak', 'sudah_ada'
   komentarAdmin: text('komentar_admin'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Tabel Riwayat Penyesuaian Stok (Audit Trail)
+export const inventoryAdjustments = pgTable('inventory_adjustments', {
+  id: serial('id').primaryKey(),
+  productId: integer('product_id').notNull().references(() => products.id),
+  stokSistem: integer('stok_sistem').notNull(),
+  stokFisik: integer('stok_fisik').notNull(),
+  selisih: integer('selisih').notNull(),
+  alasan: text('alasan').notNull(), // Misalnya: "Barang kedaluwarsa", "Hilang", "Salah hitung awal"
   createdAt: timestamp('created_at').defaultNow(),
 });
