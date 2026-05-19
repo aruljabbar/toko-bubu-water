@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { logoutAdmin } from '../../actions/auth';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -24,6 +25,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/opname" className="px-4 py-2 rounded-md hover:bg-slate-800 transition">
             📋 Audit Stok
           </Link>
+          <Link href="/admin/piutang" className="px-4 py-2 rounded-md hover:bg-slate-800 transition">
+            � Piutang
+          </Link>
+          <form action={logoutAdmin}>
+            <button type="submit" className="w-full text-left px-4 py-2 mt-8 rounded-md text-red-400 hover:bg-red-900/30 transition flex items-center gap-2">
+              🔒 Kunci Layar
+            </button>
+          </form>
         </nav>
 
         <div className="mt-auto text-xs text-slate-500">

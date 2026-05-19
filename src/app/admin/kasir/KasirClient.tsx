@@ -8,6 +8,8 @@ type Produk = {
   barcode: string | null; // Tambahkan tipe barcode
   namaProduk: string;
   harga: number;
+  hargaGrosir: number | null; // Tambahan
+  minGrosir: number | null;   // Tambahan
   stok: number;
 };
 
@@ -17,6 +19,23 @@ export default function KasirClient({ daftarProduk }: { daftarProduk: Produk[] }
   const [keranjang, setKeranjang] = useState<ItemKeranjang[]>([]);
   const [nomorHp, setNomorHp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isKasbon, setIsKasbon] = useState(false);
+  
+  // 2. Buat fungsi kecil untuk menentukan harga mana yang aktif
+  const dapatkanHargaAktif = (item: ItemKeranjang) => {
+    // Jika produk punya aturan grosir, DAN kuantitas belanja mencapai batas minimal
+    if (item.minGrosir && item.hargaGrosir && item.kuantitas >= item.minGrosir) {
+      return item.hargaGrosir;
+    }
+    // Jika tidak, gunakan harga eceran biasa
+    return item.harga;
+  };
+
+  // 3. Update perhitungan total belanja
+  const totalBelanja = keranjang.reduce(
+    (total, item) => total + (dapatkanHargaAktif(item) * item.kuantitas), 
+    0
+  );
 
   // --- FUNGSI TAMBAH KE KERANJANG (Diperbarui sedikit agar bisa dipanggil oleh scanner) ---
   const tambahKeKeranjang = (produk: Produk) => {
@@ -82,19 +101,20 @@ export default function KasirClient({ daftarProduk }: { daftarProduk: Produk[] }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [daftarProduk]); // Daftar produk menjadi dependency agar data selalu update
   // --------------------------------
-
-  const totalBelanja = keranjang.reduce((total, item) => total + (item.harga * item.kuantitas), 0);
+  // totalBelanja sudah dideklarasi lebih atas memakai aturan grosir (dapatkanHargaAktif)
   const handleCheckout = async () => {
     setLoading(true);
     try {
       await prosesCheckout({
         nomorHp: nomorHp,
         totalBelanja: totalBelanja,
+        isKasbon: isKasbon,
         keranjang: keranjang,
       });
       alert('Transaksi Berhasil Disimpan!');
       setKeranjang([]); 
       setNomorHp(''); 
+      setIsKasbon(false);
     } catch (error) {
       alert('Terjadi kesalahan saat menyimpan transaksi.');
     } finally {
@@ -182,19 +202,30 @@ export default function KasirClient({ daftarProduk }: { daftarProduk: Produk[] }
           {keranjang.length === 0 ? (
             <p className="text-gray-400 text-center mt-10">Keranjang kosong</p>
           ) : (
-            <ul className="space-y-3">
-              {keranjang.map((item) => (
-                <li key={item.id} className="flex justify-between items-center text-sm">
+          <ul className="space-y-3">
+            {keranjang.map((item) => {
+              const hargaAktif = dapatkanHargaAktif(item);
+              const isGrosir = hargaAktif === item.hargaGrosir; // Cek apakah sedang mode grosir
+
+              return (
+                <li key={item.id} className="flex justify-between items-center text-sm border-b pb-2">
                   <div>
-                    <div className="font-medium">{item.namaProduk}</div>
-                    <div className="text-gray-500">{item.kuantitas} x Rp {item.harga.toLocaleString('id-ID')}</div>
+                    <div className="font-medium">
+                      {item.namaProduk} 
+                      {isGrosir && <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-1 py-0.5 rounded font-bold">GROSIR</span>}
+                    </div>
+                    <div className="text-gray-500">
+                      {item.kuantitas} x Rp {hargaAktif.toLocaleString('id-ID')}
+                      {isGrosir && <span className="text-xs text-gray-400 line-through ml-2">Rp {item.harga}</span>}
+                    </div>
                   </div>
                   <div className="font-bold text-gray-800">
-                    Rp {(item.kuantitas * item.harga).toLocaleString('id-ID')}
+                    Rp {(item.kuantitas * hargaAktif).toLocaleString('id-ID')}
                   </div>
                 </li>
-              ))}
-            </ul>
+              );
+            })}
+          </ul>
           )}
         </div>
 
@@ -231,6 +262,23 @@ export default function KasirClient({ daftarProduk }: { daftarProduk: Produk[] }
             >
               {loading ? 'Memproses...' : 'Simpan & Selesai'}
             </button>
+
+            <label className="flex items-center gap-2 text-sm font-bold text-red-600 bg-red-50 p-2 rounded border border-red-200">
+              <input 
+                type="checkbox" 
+                className="w-4 h-4"
+                checked={isKasbon} 
+                onChange={(e) => {
+                  // Validasi: Kasbon wajib pakai Nomor HP!
+                  if (e.target.checked && nomorHp.trim() === '') {
+                    alert('Masukkan Nomor HP pelanggan terlebih dahulu untuk mencatat kasbon!');
+                    return;
+                  }
+                  setIsKasbon(e.target.checked);
+                }} 
+              /> 
+              Catat Sebagai Kasbon (Belum Bayar)
+            </label>          
           </div>
         </div>
       </div>

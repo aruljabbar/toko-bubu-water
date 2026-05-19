@@ -30,14 +30,18 @@ export default async function HalamanProdukAdmin() {
             <label className="block text-sm font-medium text-gray-700">Nama Produk</label>
             <input type="text" name="namaProduk" required className="mt-1 block w-full border border-gray-300 rounded-md p-2" placeholder="Cth: Indomie Goreng" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Harga (Rp)</label>
+              <label className="block text-sm font-medium text-gray-700">Harga Eceran (Rp)</label>
               <input type="number" name="harga" required className="mt-1 block w-full border border-gray-300 rounded-md p-2" placeholder="3000" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Stok Awal</label>
-              <input type="number" name="stok" required className="mt-1 block w-full border border-gray-300 rounded-md p-2" placeholder="40" />
+              <label className="block text-sm font-medium text-gray-700">Harga Grosir (Opsional)</label>
+              <input type="number" name="hargaGrosir" className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-blue-50" placeholder="2800" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Min. Beli Grosir</label>
+              <input type="number" name="minGrosir" className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-blue-50" placeholder="40" />
             </div>
           </div>
           <div>
