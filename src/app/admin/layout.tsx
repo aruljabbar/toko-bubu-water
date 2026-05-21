@@ -28,6 +28,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/piutang" className="px-4 py-2 rounded-md hover:bg-slate-800 transition">
             � Piutang
           </Link>
+          <Link href="/admin/piutang" className="px-4 py-2 rounded-md hover:bg-slate-800 transition">
+            - Riwayat
+          </Link>
           <form action={logoutAdmin}>
             <button type="submit" className="w-full text-left px-4 py-2 mt-8 rounded-md text-red-400 hover:bg-red-900/30 transition flex items-center gap-2">
               🔒 Kunci Layar

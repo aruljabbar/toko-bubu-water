@@ -1,23 +1,23 @@
 'use server'
-
 import { db } from '../db';
 import { productRequests } from '../db/schema';
 import { revalidatePath } from 'next/cache';
 
 export async function submitRequest(formData: FormData) {
-  const namaBarang = formData.get('namaBarang') as string;
-  const nomorHp = formData.get('nomorHp') as string;
-  
-  // Untuk MVP, kita anggap gambar diupload ke layanan pihak ketiga (seperti imgbb) 
-  // dan user memasukkan link-nya, atau kita kosongi dulu jika tidak ada.
-  const gambarUrl = formData.get('gambarUrl') as string || null;
-
-  await db.insert(productRequests).values({
-    nomorHpPelanggan: nomorHp, // Disimpan tapi tidak ditampilkan ke publik
-    namaBarang: namaBarang,
-    gambarUrl: gambarUrl,
-    status: 'pending',
-  });
-
-  revalidatePath('/request'); 
+  try {
+    await db.insert(productRequests).values({
+      nomorHpPelanggan: formData.get('nomorHp') as string,
+      namaBarang: formData.get('namaBarang') as string,
+      gambarUrl: (formData.get('gambarUrl') as string) || null,
+      status: 'pending',
+    });
+    
+    // Refresh halaman agar data terbaru langsung muncul
+    revalidatePath('/request');
+    
+    // HAPUS return { success: true } di sini agar sesuai dengan aturan form void
+  } catch (error) {
+    console.error("Gagal insert request", error);
+    // HAPUS return { success: false } di sini
+  }
 }
