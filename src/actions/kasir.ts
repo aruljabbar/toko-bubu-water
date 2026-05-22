@@ -1,59 +1,68 @@
 'use server'
+
 import { db } from '../db';
 import { orders, orderItems, customers, products, paymentHistory } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 export async function prosesCheckout(data: any) {
-  const { nomorHp, totalBelanja, isKasbon, keranjang } = data;
+  const { nomorHp, namaBaru, totalBelanja, cashReceived, kembalian, isKasbon, keranjang } = data;
   const noHpFix = nomorHp || 'Tanpa Member';
 
-  if (nomorHp) {
+  // 1. Kelola Data Pelanggan / Akumulasi Utang Piutang
+  if (nomorHp && nomorHp !== 'Tanpa Member') {
     const pelanggan = await db.select().from(customers).where(eq(customers.nomorHp, nomorHp));
     if (pelanggan.length > 0) {
       await db.update(customers).set({
         totalTransaksi: (pelanggan[0].totalTransaksi || 0) + 1,
         akumulasiBelanja: (pelanggan[0].akumulasiBelanja || 0) + totalBelanja,
-        akumulasiUtang: isKasbon ? (pelanggan[0].akumulasiUtang || 0) + totalBelanja : pelanggan[0].akumulasiUtang,
+        akumulasiUtang: isKasbon ? (pelanggan[0].akumulasiUtang || 0) + (totalBelanja - cashReceived) : pelanggan[0].akumulasiUtang,
       }).where(eq(customers.nomorHp, nomorHp));
     } else {
       await db.insert(customers).values({
-        nomorHp, nama: 'Pelanggan Baru', akumulasiBelanja: totalBelanja, akumulasiUtang: isKasbon ? totalBelanja : 0,
+        nomorHp,
+        nama: namaBaru || 'Pelanggan Baru',
+        totalTransaksi: 1,
+        akumulasiBelanja: totalBelanja,
+        akumulasiUtang: isKasbon ? (totalBelanja - cashReceived) : 0,
       });
     }
   }
 
+  // 2. Buat ID Transaksi Utama
   const pesananBaru = await db.insert(orders).values({
     nomorHpPelanggan: noHpFix,
     tipePesanan: 'ambil_toko',
     status: 'selesai',
     statusPembayaran: isKasbon ? 'kasbon' : 'lunas',
-    totalHarga: Number(totalBelanja),
+    totalHarga: totalBelanja,
+    cashReceived: cashReceived,
+    kembalian: kembalian,
   }).returning({ id: orders.id });
 
-  // FIXED: Memastikan update stok berjalan dengan benar dengan melooping item
+  const newOrderId = pesananBaru[0].id;
+
+  // 3. Loop Deteksi Pengurangan Stok Rigid & Penyimpanan Modal Per Item
   for (const item of keranjang) {
-    const itemId = Number(item.id);
-    const qty = Number(item.kuantitas);
-    
     await db.insert(orderItems).values({
-      orderId: pesananBaru[0].id,
+      orderId: newOrderId,
       namaProduk: item.namaProduk,
-      kuantitas: qty,
+      kuantitas: Number(item.kuantitas),
       hargaSatuan: Number(item.hargaAktif),
-      modalSatuan: Number(item.modalAktif), // Modal aktif sesuai grosir/eceran
+      modalSatuan: Number(item.modalAktif || 0),
     });
 
-    const produkDb = await db.select().from(products).where(eq(products.id, itemId));
+    const produkDb = await db.select().from(products).where(eq(products.id, Number(item.id)));
     if (produkDb.length > 0) {
       await db.update(products)
-        .set({ stok: produkDb[0].stok - qty })
-        .where(eq(products.id, itemId));
+        .set({ stok: Math.max(0, produkDb[0].stok - Number(item.kuantitas)) })
+        .where(eq(products.id, Number(item.id)));
     }
   }
 
   revalidatePath('/admin/kasir');
   revalidatePath('/admin/produk');
+  revalidatePath('/admin/piutang');
   revalidatePath('/admin/riwayat');
   return { success: true };
 }

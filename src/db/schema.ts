@@ -15,21 +15,23 @@ export const products = pgTable('products', {
   barcode: text('barcode').unique(),
   namaProduk: text('nama_produk').notNull(),
   kategori: text('kategori'),
-  hargaModal: integer('harga_modal').notNull().default(0), // BARU: Modal eceran
-  hargaModalGrosir: integer('harga_modal_grosir'), // BARU: Modal grosir
+  hargaModal: integer('harga_modal').notNull().default(0),
+  hargaModalGrosir: integer('harga_modal_grosir'),
   harga: integer('harga').notNull(),
   hargaGrosir: integer('harga_grosir'),
   minGrosir: integer('min_grosir'),
   stok: integer('stok').notNull().default(0),
-  gambarUrl: text('gambar_url'), // BARU: URL Gambar produk
+  gambarUrl: text('gambar_url'),
 });
 
 export const orders = pgTable('orders', {
   id: serial('id').primaryKey(),
   nomorHpPelanggan: text('nomor_hp_pelanggan').notNull(),
   tipePesanan: text('tipe_pesanan').notNull(),
-  status: text('status').notNull().default('menunggu'),
+  status: text('status').notNull().default('selesai'),
   totalHarga: integer('total_harga').notNull(),
+  cashReceived: integer('cash_received').default(0),
+  kembalian: integer('kembalian').default(0),
   catatan: text('catatan'),
   linkTracking: text('link_tracking'),
   statusPembayaran: text('status_pembayaran').notNull().default('lunas'),
@@ -38,11 +40,11 @@ export const orders = pgTable('orders', {
 
 export const orderItems = pgTable('order_items', {
   id: serial('id').primaryKey(),
-  orderId: integer('order_id').notNull().references(() => orders.id),
+  orderId: integer('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
   namaProduk: text('nama_produk').notNull(),
   kuantitas: integer('kuantitas').notNull(),
   hargaSatuan: integer('harga_satuan').notNull(),
-  modalSatuan: integer('modal_satuan').notNull().default(0), // BARU: Untuk rekap laba per transaksi
+  modalSatuan: integer('modal_satuan').notNull().default(0),
 });
 
 export const productRequests = pgTable('product_requests', {
@@ -57,7 +59,7 @@ export const productRequests = pgTable('product_requests', {
 
 export const inventoryAdjustments = pgTable('inventory_adjustments', {
   id: serial('id').primaryKey(),
-  productId: integer('product_id').notNull().references(() => products.id),
+  productId: integer('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
   stokSistem: integer('stok_sistem').notNull(),
   stokFisik: integer('stok_fisik').notNull(),
   selisih: integer('selisih').notNull(),
