@@ -62,13 +62,18 @@ export default async function RiwayatTransaksiPage({ searchParams }: { searchPar
                     </thead>
                     <tbody>
                       {associatedItems.map((item) => (
-                        <tr key={item.id} className="border-b border-slate-50 last:border-0">
-                          <td className="py-2 font-semibold text-slate-700">{item.namaProduk}</td>
-                          <td className="py-2 text-center font-bold">{item.kuantitas}</td>
-                          <td className="py-2 text-right">Rp {item.hargaSatuan.toLocaleString()}</td>
-                          <td className="py-2 text-right text-emerald-600 font-bold">+Rp {((item.hargaSatuan - item.modalSatuan) * item.kuantitas).toLocaleString()}</td>
-                        </tr>
-                      ))}
+                      <tr key={item.id} className="border-b border-slate-50 last:border-0">
+                        <td className="py-2 font-semibold text-slate-700">{item.namaProduk}</td>
+                        <td className="py-2 text-center font-bold">{item.kuantitas}</td>
+                        <td className="py-2 text-right">
+                          <div className="text-emerald-600 font-bold">Jual: Rp {item.hargaSatuan.toLocaleString('id-ID')}</div>
+                          <div className="text-xs text-rose-500">Modal: Rp {item.modalSatuan.toLocaleString('id-ID')}</div>
+                        </td>
+                        <td className="py-2 text-right text-emerald-600 font-black">
+                          +Rp {((item.hargaSatuan - item.modalSatuan) * item.kuantitas).toLocaleString('id-ID')}
+                        </td>
+                      </tr>
+                    ))}
                     </tbody>
                   </table>
                 </div>

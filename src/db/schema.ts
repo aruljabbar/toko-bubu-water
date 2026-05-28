@@ -15,6 +15,7 @@ export const products = pgTable('products', {
   barcode: text('barcode').unique(),
   namaProduk: text('nama_produk').notNull(),
   kategori: text('kategori'),
+  satuan: text('satuan').notNull().default('pcs'), // BARU: Satuan (pcs, gram, dll)
   hargaModal: integer('harga_modal').notNull().default(0),
   hargaModalGrosir: integer('harga_modal_grosir'),
   harga: integer('harga').notNull(),

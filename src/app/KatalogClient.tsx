@@ -4,8 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 type Product = {
-  id: number; namaProduk: string; harga: number; hargaGrosir: number | null;
-  minGrosir: number | null; stok: number; kategori: string | null; gambarUrl: string | null;
+  id: number; 
+  namaProduk: string; 
+  harga: number; 
+  hargaGrosir: number | null;
+  minGrosir: number | null; 
+  stok: number; 
+  kategori: string | null; 
+  gambarUrl: string | null;
 };
 
 export default function KatalogClient({ katalog }: { katalog: Product[] }) {
@@ -58,13 +64,22 @@ export default function KatalogClient({ katalog }: { katalog: Product[] }) {
           {filtered.map(p => (
             <div key={p.id} className="bg-white rounded-2xl border p-3 flex flex-col justify-between hover:shadow-sm transition">
               <div className="flex flex-col items-center">
-                {p.gambarUrl ? <img src={p.gambarUrl} className="h-24 w-24 object-cover rounded-xl border mb-2" /> : <div className="h-24 w-24 bg-slate-50 rounded-xl mb-2 flex items-center justify-center text-slate-400 text-xs font-bold border">No Image</div>}
+                {p.gambarUrl ? (
+                  <img src={p.gambarUrl} className="h-24 w-24 object-cover rounded-xl border mb-2" alt={p.namaProduk} />
+                ) : (
+                  <div className="h-24 w-24 bg-slate-50 rounded-xl mb-2 flex items-center justify-center text-slate-400 text-xs font-bold border">No Image</div>
+                )}
                 <h3 className="font-bold text-xs text-slate-800 text-center line-clamp-2 w-full">{p.namaProduk}</h3>
                 <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded mt-1">{p.kategori || 'Umum'}</span>
               </div>
               <div className="mt-3 border-t pt-2 text-center w-full">
-                <div className="text-blue-600 font-black text-sm">Rp {p.harga.toLocaleString()}</div>
-                {p.hargaGrosir && <div className="text-[10px] text-emerald-600 font-bold">Grosir: Rp {p.hargaGrosir.toLocaleString()} <span className="text-slate-400 block font-normal">(Min Beli: {p.minGrosir} Pcs)</span></div>}
+                {/* PERBAIKAN: Menambahkan 'id-ID' di toLocaleString */}
+                <div className="text-blue-600 font-black text-sm">Rp {p.harga.toLocaleString('id-ID')}</div>
+                {p.hargaGrosir && (
+                  <div className="text-[10px] text-emerald-600 font-bold">
+                    Grosir: Rp {p.hargaGrosir.toLocaleString('id-ID')} <span className="text-slate-400 block font-normal">(Min Beli: {p.minGrosir} Pcs)</span>
+                  </div>
+                )}
                 <div className="text-[10px] font-bold text-slate-500 mt-2 bg-slate-50 p-1 rounded border border-slate-100">📦 Stok Tersedia: {p.stok}</div>
               </div>
             </div>

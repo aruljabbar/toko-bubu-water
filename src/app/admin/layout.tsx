@@ -27,6 +27,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin/piutang" className="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               💰 Piutang & Member
             </Link>
+            <Link href="/admin/member" className="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+            👥 Manajemen Pelanggan
+            </Link>
             <Link href="/admin/riwayat" className="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               📜 Riwayat Laba & Nota
             </Link>
