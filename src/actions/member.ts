@@ -5,6 +5,18 @@ import { customers } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
+export async function tambahMember(formData: FormData) {
+  try {
+    await db.insert(customers).values({
+      nama: formData.get('nama') as string,
+      nomorHp: formData.get('nomorHp') as string,
+    });
+  } catch (e) {
+    // Abaikan jika duplikat
+  }
+  revalidatePath('/admin/member');
+}
+
 export async function editMember(formData: FormData) {
   const id = Number(formData.get('id'));
   await db.update(customers).set({

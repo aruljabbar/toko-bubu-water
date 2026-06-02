@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, integer, real, timestamp } from 'drizzle-orm/pg-core';
 
 export const customers = pgTable('customers', {
   id: serial('id').primaryKey(),
@@ -7,6 +7,7 @@ export const customers = pgTable('customers', {
   totalTransaksi: integer('total_transaksi').default(0),
   akumulasiBelanja: integer('akumulasi_belanja').default(0),
   akumulasiUtang: integer('akumulasi_utang').default(0),
+  akumulasiLaba: integer('akumulasi_laba').default(0), // BARU: Laba dari member ini
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -15,13 +16,13 @@ export const products = pgTable('products', {
   barcode: text('barcode').unique(),
   namaProduk: text('nama_produk').notNull(),
   kategori: text('kategori'),
-  satuan: text('satuan').notNull().default('pcs'), // BARU: Satuan (pcs, gram, dll)
+  satuan: text('satuan').notNull().default('pcs'), 
   hargaModal: integer('harga_modal').notNull().default(0),
   hargaModalGrosir: integer('harga_modal_grosir'),
   harga: integer('harga').notNull(),
   hargaGrosir: integer('harga_grosir'),
   minGrosir: integer('min_grosir'),
-  stok: integer('stok').notNull().default(0),
+  stok: real('stok').notNull().default(0), // UBAH: Jadi real agar bisa koma (0.5 kg)
   gambarUrl: text('gambar_url'),
 });
 
@@ -43,7 +44,7 @@ export const orderItems = pgTable('order_items', {
   id: serial('id').primaryKey(),
   orderId: integer('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
   namaProduk: text('nama_produk').notNull(),
-  kuantitas: integer('kuantitas').notNull(),
+  kuantitas: real('kuantitas').notNull(), // UBAH: Jadi real (desimal)
   hargaSatuan: integer('harga_satuan').notNull(),
   modalSatuan: integer('modal_satuan').notNull().default(0),
 });
@@ -56,14 +57,15 @@ export const productRequests = pgTable('product_requests', {
   status: text('status').notNull().default('pending'),
   komentarAdmin: text('komentar_admin'),
   createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
 export const inventoryAdjustments = pgTable('inventory_adjustments', {
   id: serial('id').primaryKey(),
   productId: integer('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
-  stokSistem: integer('stok_sistem').notNull(),
-  stokFisik: integer('stok_fisik').notNull(),
-  selisih: integer('selisih').notNull(),
+  stokSistem: real('stok_sistem').notNull(), // UBAH: Jadi real (desimal)
+  stokFisik: real('stok_fisik').notNull(),   // UBAH: Jadi real (desimal)
+  selisih: real('selisih').notNull(),        // UBAH: Jadi real (desimal)
   alasan: text('alasan').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });

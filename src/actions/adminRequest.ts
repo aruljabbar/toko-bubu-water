@@ -1,5 +1,4 @@
 'use server'
-
 import { db } from '../db';
 import { productRequests } from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -11,7 +10,7 @@ export async function updateStatusRequest(formData: FormData) {
   const komentar = formData.get('komentar') as string;
 
   await db.update(productRequests)
-    .set({ status: status, komentarAdmin: komentar || null })
+    .set({ status: status, komentarAdmin: komentar || null, updatedAt: new Date() }) // Update jam balasan
     .where(eq(productRequests.id, id));
 
   revalidatePath('/admin/request');

@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { prosesCheckout } from '../../../actions/kasir';
 
 type Produk = {
   id: number; barcode: string | null; namaProduk: string; kategori: string | null;
   harga: number; hargaGrosir: number | null; minGrosir: number | null;
-  hargaModal: number; hargaModalGrosir: number | null; stok: number; gambarUrl: string | null;
+  hargaModal: number; hargaModalGrosir: number | null; stok: number; gambarUrl: string | null; satuan: string;
 };
 type Member = { nomorHp: string; nama: string; };
 type ItemKeranjang = { produk: Produk; kuantitas: number; };
@@ -16,6 +16,8 @@ export default function KasirClient({ daftarProduk, daftarMember }: { daftarProd
   const [nomorHp, setNomorHp] = useState('');
   const [namaBaru, setNamaBaru] = useState('');
   const [isMemberBaru, setIsMemberBaru] = useState(false);
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false); 
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKategori, setSelectedKategori] = useState('Semua');
 
@@ -23,14 +25,35 @@ export default function KasirClient({ daftarProduk, daftarMember }: { daftarProd
   const [cashReceived, setCashReceived] = useState<number>(0);
   const [isPrint, setIsPrint] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Mencegah Hydration Mismatch & Memuat Keranjang dari LocalStorage
+  useEffect(() => {
+    setIsClient(true);
+    const saved = localStorage.getItem('bubuKeranjang');
+    if (saved) setKeranjang(JSON.parse(saved));
+  }, []);
+
+  // Menyimpan Keranjang ke LocalStorage setiap ada perubahan
+  useEffect(() => {
+    if (isClient) localStorage.setItem('bubuKeranjang', JSON.stringify(keranjang));
+  }, [keranjang, isClient]);
 
   useEffect(() => {
-    if (nomorHp.trim() !== '') {
-      const match = daftarMember.find(m => m.nomorHp === nomorHp);
-      if (match) { setNamaBaru(match.nama); setIsMemberBaru(false); } 
-      else { setIsMemberBaru(true); }
-    } else { setNamaBaru(''); setIsMemberBaru(false); }
-  }, [nomorHp, daftarMember]);
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) { setShowMemberDropdown(false); }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredMembers = daftarMember.filter(m => {
+    if(!nomorHp) return false;
+    const q = nomorHp.toLowerCase();
+    return m.nomorHp.includes(q) || m.nama.toLowerCase().includes(q);
+  });
 
   const dapatkanHargaAktif = (item: ItemKeranjang) => (item.produk.minGrosir && item.produk.hargaGrosir && item.kuantitas >= item.produk.minGrosir) ? item.produk.hargaGrosir : item.produk.harga;
   const dapatkanModalAktif = (item: ItemKeranjang) => (item.produk.minGrosir && item.produk.hargaModalGrosir && item.kuantitas >= item.produk.minGrosir) ? item.produk.hargaModalGrosir : item.produk.hargaModal;
@@ -56,7 +79,6 @@ export default function KasirClient({ daftarProduk, daftarMember }: { daftarProd
     });
   };
 
-  // BARCODE AUTO-ADD FIX
   useEffect(() => {
     let buffer = '';
     let timer: NodeJS.Timeout;
@@ -78,10 +100,9 @@ export default function KasirClient({ daftarProduk, daftarMember }: { daftarProd
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [daftarProduk]);
 
-  // QUICK CASH LOGIC
   const getQuickCashOptions = (total: number) => {
     if (total <= 0) return [];
-    const options = new Set<number>([total]); // Uang pas selalu ada
+    const options = new Set<number>([total]); 
     const thresholds = [5000, 10000, 20000, 50000, 100000];
     thresholds.forEach(t => {
       const ceil = Math.ceil(total / t) * t;
@@ -100,25 +121,24 @@ export default function KasirClient({ daftarProduk, daftarMember }: { daftarProd
     setLoading(true);
     const isKasbon = cashReceived < totalBelanja;
     const kembalian = cashReceived > totalBelanja ? cashReceived - totalBelanja : 0;
-    const mappedKeranjang = keranjang.map(item => ({ id: item.produk.id, namaProduk: item.produk.namaProduk, kuantitas: item.kuantitas, hargaAktif: dapatkanHargaAktif(item), modalAktif: dapatkanModalAktif(item) }));
+    const mappedKeranjang = keranjang.map(item => ({ id: item.produk.id, namaProduk: `${item.produk.namaProduk} (${item.produk.satuan})`, kuantitas: item.kuantitas, hargaAktif: dapatkanHargaAktif(item), modalAktif: dapatkanModalAktif(item) }));
 
     try {
       await prosesCheckout({ nomorHp: nomorHp || 'Tanpa Member', namaBaru: isMemberBaru ? namaBaru : undefined, totalBelanja, cashReceived, kembalian, isKasbon, keranjang: mappedKeranjang });
       alert('Transaksi Sukses Disimpan! 🎉');
       setKeranjang([]); setNomorHp(''); setNamaBaru(''); setCashReceived(0); setShowPaymentModal(false);
+      localStorage.removeItem('bubuKeranjang');
     } catch (err) { alert('Gagal memproses pembayaran.'); } finally { setLoading(false); }
   };
+
+  if (!isClient) return null; // Mencegah kedipan SSR vs CSR
 
   return (
     <div className="flex gap-6 p-6 min-h-screen bg-slate-50">
       <div className="w-2/3 flex flex-col gap-4">
         <div className="flex gap-4 bg-white p-4 rounded-xl shadow-sm border items-center">
           <div className="relative flex-1">
-            <input 
-              type="text" placeholder="🔍 Cari Produk atau Scan Barcode langsung..."
-              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 pr-8"
-            />
+            <input type="text" placeholder="🔍 Cari Produk atau Scan Barcode langsung..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 pr-8" />
             {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-3 top-2.5 text-slate-400 font-bold hover:text-rose-500">✕</button>}
           </div>
           <select value={selectedKategori} onChange={e => setSelectedKategori(e.target.value)} className="border rounded-lg p-2.5 text-sm bg-white font-bold text-slate-700">
@@ -136,7 +156,7 @@ export default function KasirClient({ daftarProduk, daftarMember }: { daftarProd
               <div className="mt-auto pt-2 w-full">
                 <div className="text-blue-600 font-black text-sm">Rp {p.harga.toLocaleString('id-ID')}</div>
                 {p.hargaGrosir && <div className="text-[10px] text-emerald-600 font-bold">Grosir: Rp {p.hargaGrosir.toLocaleString('id-ID')}</div>}
-                <div className="text-[10px] text-slate-500 mt-1 font-semibold border-t pt-1">Sisa: {p.stok}</div>
+                <div className="text-[10px] text-slate-500 mt-1 font-semibold border-t pt-1">Sisa: {p.stok} {p.satuan}</div>
               </div>
             </button>
           ))}
@@ -154,15 +174,17 @@ export default function KasirClient({ daftarProduk, daftarMember }: { daftarProd
                   <div key={item.produk.id} className="flex justify-between items-center text-sm border-b pb-2">
                     <div className="flex-1 pr-2">
                       <div className="font-bold text-slate-700 line-clamp-1">{item.produk.namaProduk}</div>
-                      <div className="text-xs text-slate-400">Rp {activePrice.toLocaleString('id-ID')}</div>
+                      <div className="text-xs text-slate-400">Rp {activePrice.toLocaleString('id-ID')} / {item.produk.satuan}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <input type="number" value={item.kuantitas} onChange={e => {
+                      {/* FIXED: step="any" agar kasir bisa input desimal 0.5 gram / 1.5 kg */}
+                      <input type="number" step="any" value={item.kuantitas === 0 ? '' : item.kuantitas} onChange={e => {
                         const val = Number(e.target.value);
-                        if(val <= 0) setKeranjang(prev => prev.filter(i => i.produk.id !== item.produk.id));
+                        if(val < 0) return;
+                        if(val === 0) { setKeranjang(prev => prev.filter(i => i.produk.id !== item.produk.id)); }
                         else if(val > item.produk.stok) alert('Stok tidak cukup!');
                         else setKeranjang(prev => prev.map(i => i.produk.id === item.produk.id ? { ...i, kuantitas: val } : i));
-                      }} className="w-12 border rounded p-1 text-center font-black text-slate-800 bg-slate-50" />
+                      }} className="w-16 border rounded p-1 text-center font-black text-slate-800 bg-slate-50" />
                       <div className="font-bold text-slate-800 text-right w-20">Rp {(activePrice * item.kuantitas).toLocaleString('id-ID')}</div>
                     </div>
                   </div>
@@ -177,16 +199,51 @@ export default function KasirClient({ daftarProduk, daftarMember }: { daftarProd
             <span>Total Tagihan:</span><span className="text-blue-600">Rp {totalBelanja.toLocaleString('id-ID')}</span>
           </div>
 
-          <div className="bg-slate-50 p-3 rounded-xl border space-y-2">
+          <div className="bg-slate-50 p-3 rounded-xl border space-y-2 relative" ref={wrapperRef}>
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">🔍 Cari / Input Member Baru</label>
-              <input type="text" value={nomorHp} onChange={e => setNomorHp(e.target.value)} placeholder="0812..." className="w-full p-2 border rounded-lg text-sm bg-white" list="kasir-member-list" />
-              <datalist id="kasir-member-list">{daftarMember.map(m => <option key={m.nomorHp} value={m.nomorHp}>{m.nama}</option>)}</datalist>
+              <label className="block text-xs font-bold text-slate-600 mb-1">🔍 Cari Member (No. HP / Nama / Acak)</label>
+              <input 
+                type="text" 
+                value={nomorHp} 
+                onChange={e => {
+                  setNomorHp(e.target.value);
+                  setShowMemberDropdown(true);
+                  setIsMemberBaru(true);
+                  setNamaBaru('');
+                }} 
+                onFocus={() => setShowMemberDropdown(true)}
+                placeholder="Ketik angka HP atau Nama..." 
+                className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500" 
+              />
+              
+              {showMemberDropdown && nomorHp.length > 0 && (
+                <ul className="absolute z-10 w-full bg-white border rounded-lg shadow-xl mt-1 max-h-40 overflow-auto">
+                  {filteredMembers.length > 0 ? (
+                    filteredMembers.map(m => (
+                      <li 
+                        key={m.nomorHp} 
+                        onClick={() => {
+                          setNomorHp(m.nomorHp);
+                          setNamaBaru(m.nama);
+                          setIsMemberBaru(false);
+                          setShowMemberDropdown(false);
+                        }}
+                        className="p-2 hover:bg-blue-50 cursor-pointer border-b last:border-0"
+                      >
+                        <div className="font-bold text-slate-800 text-sm">{m.nama}</div>
+                        <div className="text-xs text-blue-600 font-mono">{m.nomorHp}</div>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="p-2 text-xs text-slate-500 text-center">Member tidak ditemukan. Akan didaftar baru.</li>
+                  )}
+                </ul>
+              )}
             </div>
             {nomorHp.trim() !== '' && (
               <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">{isMemberBaru ? '✨ Nama Member Baru' : '👤 Terdaftar Sebagai'}</label>
-                <input type="text" value={namaBaru} onChange={e => setNamaBaru(e.target.value)} disabled={!isMemberBaru} placeholder="Input nama..." className="w-full p-2 border rounded-lg text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500" />
+                <label className="block text-xs font-bold text-slate-600 mb-1">{isMemberBaru ? '✨ Input Nama Member Baru' : '👤 Terdaftar Sebagai'}</label>
+                <input type="text" value={namaBaru} onChange={e => setNamaBaru(e.target.value)} disabled={!isMemberBaru} placeholder="Ketik nama..." className="w-full p-2 border rounded-lg text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500 font-bold" />
               </div>
             )}
           </div>
@@ -194,7 +251,6 @@ export default function KasirClient({ daftarProduk, daftarMember }: { daftarProd
         </div>
       </div>
 
-      {/* MODAL PEMBAYARAN PINTAR */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md space-y-4">
@@ -204,15 +260,18 @@ export default function KasirClient({ daftarProduk, daftarMember }: { daftarProd
             </div>
             
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-600">Pilih Pecahan Uang Tunai Diterima:</label>
+              <label className="block text-xs font-bold text-slate-600">Pilih Pecahan Uang Tunai / Kasbon:</label>
               <div className="flex flex-wrap gap-2">
+                <button onClick={() => setCashReceived(0)} className={`px-3 py-1.5 rounded-lg text-xs font-black transition border ${cashReceived === 0 ? 'bg-rose-600 text-white border-rose-600 shadow' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'}`}>
+                  📝 FULL KASBON (Rp 0)
+                </button>
                 {getQuickCashOptions(totalBelanja).map(amt => (
-                  <button key={amt} onClick={() => setCashReceived(amt)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${cashReceived === amt ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
-                    {amt === totalBelanja ? 'UANG PAS' : `Rp ${amt.toLocaleString('id-ID')}`}
+                  <button key={amt} onClick={() => setCashReceived(amt)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${cashReceived === amt && cashReceived !== 0 ? 'bg-blue-600 text-white border-blue-600 shadow' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
+                    {amt === totalBelanja ? '✅ UANG PAS' : `Rp ${amt.toLocaleString('id-ID')}`}
                   </button>
                 ))}
               </div>
-              <input type="number" value={cashReceived || ''} onChange={e => setCashReceived(Number(e.target.value))} placeholder="Ketik nominal manual..." className="w-full border-2 focus:border-blue-500 focus:ring-0 rounded-xl p-3 text-lg font-black text-slate-800 text-center" />
+              <input type="number" value={cashReceived === 0 ? '' : cashReceived} onChange={e => setCashReceived(Number(e.target.value))} placeholder="0 (Kosongkan jika Full Kasbon)" className="w-full border-2 focus:border-blue-500 focus:ring-0 rounded-xl p-3 text-lg font-black text-slate-800 text-center" />
             </div>
 
             <div>
@@ -222,7 +281,7 @@ export default function KasirClient({ daftarProduk, daftarMember }: { daftarProd
                 </div>
               ) : (
                 <div className="flex justify-between text-rose-700 font-black bg-rose-50 p-3 rounded-xl border border-rose-200 text-lg">
-                  <span>Sisa (Piutang):</span><span>Rp {(totalBelanja - cashReceived).toLocaleString('id-ID')}</span>
+                  <span>Dicatat Jadi Piutang:</span><span>Rp {(totalBelanja - cashReceived).toLocaleString('id-ID')}</span>
                 </div>
               )}
             </div>
