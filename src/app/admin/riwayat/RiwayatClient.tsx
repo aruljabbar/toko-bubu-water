@@ -2,12 +2,10 @@
 
 import { useState } from 'react';
 
-export default function RiwayatClient({ data }: { data: any[] }) {
-  const [search, setSearch] = useState('');
+export default function RiwayatClient({ data, initialHp }: { data: any[], initialHp: string }) {
+  const [search, setSearch] = useState(initialHp);
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
-  
-  // State untuk melacak ID transaksi mana yang sedang di-"Show More"
   const [expandedIds, setExpandedIds] = useState<number[]>([]);
 
   const toggleExpand = (id: number) => {
@@ -16,7 +14,8 @@ export default function RiwayatClient({ data }: { data: any[] }) {
 
   const filtered = data.filter(d => 
     d.nomorHpPelanggan.includes(search) || 
-    d.id.toString().includes(search)
+    d.id.toString().includes(search) ||
+    d.namaPelanggan.toLowerCase().includes(search.toLowerCase())
   );
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -28,9 +27,9 @@ export default function RiwayatClient({ data }: { data: any[] }) {
       
       <div className="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center">
         <input 
-          type="text" placeholder="🔍 Cari ID Nota atau No HP..." 
+          type="text" placeholder="🔍 Cari ID Nota, No HP, atau Nama Pelanggan..." 
           value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} 
-          className="w-72 border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500" 
+          className="w-96 border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500" 
         />
         <div className="text-xs font-bold text-slate-500">Total Transaksi: {filtered.length} Nota</div>
       </div>
@@ -52,7 +51,7 @@ export default function RiwayatClient({ data }: { data: any[] }) {
                   <div className="flex gap-4">
                     <span className="bg-blue-100 text-blue-800 px-2 rounded">ID NOTA: #{order.id}</span>
                     <span>🕒 {new Date(order.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</span>
-                    <span>👤 Pelanggan: {order.nomorHpPelanggan}</span>
+                    <span>👤 {order.namaPelanggan} ({order.nomorHpPelanggan})</span>
                   </div>
                   <span className={`px-2 py-0.5 rounded text-[10px] text-white uppercase ${order.statusPembayaran === 'lunas' ? 'bg-emerald-500' : 'bg-rose-500'}`}>
                     {order.statusPembayaran}
@@ -91,8 +90,16 @@ export default function RiwayatClient({ data }: { data: any[] }) {
                   <div className="text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 shadow-sm">
                     Total Laba Bersih Nota: +Rp {totalProfit.toLocaleString('id-ID')}
                   </div>
-                  <div className="text-slate-800 text-sm">
-                    Omzet: <span className="text-blue-600 font-black">Rp {order.totalHarga.toLocaleString('id-ID')}</span>
+                  <div className="text-slate-800 text-sm text-right flex flex-col">
+                    <div>
+                      Omzet: <span className="text-blue-600 font-black">Rp {order.totalHarga.toLocaleString('id-ID')}</span>
+                    </div>
+                    {/* DETAIL PEMBAYARAN KASBON SEBAGIAN */}
+                    {order.statusPembayaran === 'kasbon' && (
+                      <div className="text-[10px] text-rose-600 mt-0.5">
+                        (Dibayar: Rp {order.cashReceived.toLocaleString('id-ID')} | Kasbon: Rp {(order.totalHarga - order.cashReceived).toLocaleString('id-ID')})
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -101,7 +108,6 @@ export default function RiwayatClient({ data }: { data: any[] }) {
         )}
       </div>
 
-      {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex justify-center gap-2 mt-6">
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 bg-white border rounded-lg font-bold text-sm disabled:opacity-50">⬅️ Prev</button>

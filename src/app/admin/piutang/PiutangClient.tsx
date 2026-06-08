@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { lunasiKasbon } from '../../../actions/kasir';
 
-export default function PiutangClient({ pengutang, riwayatBayar }: { pengutang: any[], riwayatBayar: any[] }) {
+export default function PiutangClient({ pengutang, riwayatBayar, kasbonOrders }: { pengutang: any[], riwayatBayar: any[], kasbonOrders: any[] }) {
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
   
@@ -20,24 +20,43 @@ export default function PiutangClient({ pengutang, riwayatBayar }: { pengutang: 
           <h2 className="font-bold text-base mb-4 text-rose-600 border-b pb-2">Tagihan Kasbon Berjalan</h2>
           <ul className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
             {pengutang.length === 0 ? <p className="text-xs text-slate-500 text-center">Buku piutang bersih! 🎉</p> : 
-              pengutang.map(p => (
-              <li key={p.id} className="border p-4 rounded-xl bg-slate-50 flex flex-col gap-3 hover:border-blue-300 transition">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <Link href={`/admin/riwayat?hp=${p.nomorHp}`} className="font-black text-blue-600 hover:underline text-sm flex items-center gap-1">📱 {p.nomorHp} ↗</Link>
-                    <div className="text-xs text-slate-500 font-bold mt-1">👤 Member: {p.nama}</div>
-                  </div>
-                  <div className="text-rose-600 font-black text-base bg-white px-3 py-1.5 rounded-lg border border-rose-100 shadow-sm">
-                    Rp {p.akumulasiUtang?.toLocaleString('id-ID')}
-                  </div>
-                </div>
-                <form action={lunasiKasbon} className="flex gap-2">
-                  <input type="hidden" name="nomorHp" value={p.nomorHp} />
-                  <input type="number" name="nominalBayar" required placeholder="Masukan nominal pelunasan..." className="border p-2 rounded-lg text-sm flex-1 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold" />
-                  <button type="submit" className="bg-emerald-600 text-white font-bold px-4 rounded-lg text-xs hover:bg-emerald-700 transition shadow">Terima Uang</button>
-                </form>
-              </li>
-            ))}
+              pengutang.map(p => {
+                // Cari nota yang menyebabkan utang untuk member ini
+                const riwayatKasbonMember = kasbonOrders.filter(o => o.nomorHpPelanggan === p.nomorHp);
+
+                return (
+                  <li key={p.id} className="border p-4 rounded-xl bg-slate-50 flex flex-col gap-3 hover:border-blue-300 transition">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <Link href={`/admin/riwayat?hp=${p.nomorHp}`} className="font-black text-blue-600 hover:underline text-sm flex items-center gap-1">📱 {p.nomorHp} ↗</Link>
+                        <div className="text-xs text-slate-500 font-bold mt-1">👤 Member: {p.nama}</div>
+                      </div>
+                      <div className="text-rose-600 font-black text-base bg-white px-3 py-1.5 rounded-lg border border-rose-100 shadow-sm">
+                        Rp {p.akumulasiUtang?.toLocaleString('id-ID')}
+                      </div>
+                    </div>
+                    
+                    {riwayatKasbonMember.length > 0 && (
+                      <div className="mt-1 p-2 bg-rose-100/50 rounded border border-rose-200 text-xs text-rose-800">
+                        <strong className="block mb-1">Riwayat Nota Kasbon:</strong>
+                        <ul className="list-disc ml-4 space-y-0.5">
+                          {riwayatKasbonMember.map(o => (
+                            <li key={o.id}>Nota #{o.id} - Hutang Awal: Rp {(o.totalHarga - o.cashReceived).toLocaleString('id-ID')}</li>
+                          ))}
+                        </ul>
+                        <div className="text-[9px] text-rose-500 mt-1 italic">*Total hutang di atas dapat berkurang jika member pernah mencicil sebagian.</div>
+                      </div>
+                    )}
+
+                    <form action={lunasiKasbon} className="flex gap-2">
+                      <input type="hidden" name="nomorHp" value={p.nomorHp} />
+                      <input type="number" name="nominalBayar" required placeholder="Masukan nominal pelunasan..." className="border p-2 rounded-lg text-sm flex-1 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold" />
+                      <button type="submit" className="bg-emerald-600 text-white font-bold px-4 rounded-lg text-xs hover:bg-emerald-700 transition shadow">Terima Uang</button>
+                    </form>
+                  </li>
+                )
+              })
+            }
           </ul>
         </div>
 

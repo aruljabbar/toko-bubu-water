@@ -12,6 +12,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           
           <nav className="flex flex-col gap-1.5">
+            <Link href="/admin/dashboard" className="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
+              📊 Summary & Dashboard
+            </Link>
             <Link href="/admin/kasir" className="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               💳 Kasir Utama (POS)
             </Link>
@@ -28,7 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               💰 Piutang & Member
             </Link>
             <Link href="/admin/member" className="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
-            👥 Manajemen Pelanggan
+              👥 Database Pelanggan
             </Link>
             <Link href="/admin/riwayat" className="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition flex items-center gap-2">
               📜 Riwayat Laba & Nota
@@ -43,7 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </button>
           </form>
           <div className="mt-4 text-[10px] text-slate-500 text-center font-bold">
-            Sistem POS Retail v1.5
+            Sistem POS Retail v2.0
           </div>
         </div>
       </aside>
