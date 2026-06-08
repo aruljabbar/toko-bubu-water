@@ -6,39 +6,49 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 export async function prosesCheckout(data: any) {
-  const { nomorHp, namaBaru, totalBelanja, cashReceived, kembalian, isKasbon, keranjang } = data;
+  const { nomorHp, namaBaru, totalBelanja, cashReceived, kembalian, isKasbon, potonganPoin, shiftId, keranjang } = data;
   const noHpFix = nomorHp || 'Tanpa Member';
 
-  // Hitung total laba dari transaksi ini
-  const totalLabaNota = keranjang.reduce((acc: number, item: any) => acc + ((item.hargaAktif - item.modalAktif) * item.kuantitas), 0);
+  const totalTagihanAkhir = totalBelanja - potonganPoin;
+  
+  // Poin yang didapat: Kelipatan 1000 = 1 poin. (Dihitung dari tagihan akhir setelah potong poin)
+  const poinDidapat = Math.floor(totalTagihanAkhir / 1000);
+
+  // Laba bersih nota. (Jika diskon poin, laba toko berkurang)
+  const totalLabaKotor = keranjang.reduce((acc: number, item: any) => acc + ((item.hargaAktif - item.modalAktif) * item.kuantitas), 0);
+  const labaBersihAkhir = totalLabaKotor - potonganPoin;
 
   if (nomorHp && nomorHp !== 'Tanpa Member') {
     const pelanggan = await db.select().from(customers).where(eq(customers.nomorHp, nomorHp));
     if (pelanggan.length > 0) {
       await db.update(customers).set({
         totalTransaksi: (pelanggan[0].totalTransaksi || 0) + 1,
-        akumulasiBelanja: (pelanggan[0].akumulasiBelanja || 0) + totalBelanja,
-        akumulasiUtang: isKasbon ? (pelanggan[0].akumulasiUtang || 0) + (totalBelanja - cashReceived) : pelanggan[0].akumulasiUtang,
-        akumulasiLaba: (pelanggan[0].akumulasiLaba || 0) + totalLabaNota, // Masukkan laba
+        akumulasiBelanja: (pelanggan[0].akumulasiBelanja || 0) + totalTagihanAkhir,
+        akumulasiUtang: isKasbon ? (pelanggan[0].akumulasiUtang || 0) + (totalTagihanAkhir - cashReceived) : pelanggan[0].akumulasiUtang,
+        akumulasiLaba: (pelanggan[0].akumulasiLaba || 0) + labaBersihAkhir,
+        poin: (pelanggan[0].poin || 0) - potonganPoin + poinDidapat // Kurangi poin dipakai, tambah poin baru
       }).where(eq(customers.nomorHp, nomorHp));
     } else {
       await db.insert(customers).values({
         nomorHp,
         nama: namaBaru || 'Pelanggan Baru',
         totalTransaksi: 1,
-        akumulasiBelanja: totalBelanja,
-        akumulasiUtang: isKasbon ? (totalBelanja - cashReceived) : 0,
-        akumulasiLaba: totalLabaNota,
+        akumulasiBelanja: totalTagihanAkhir,
+        akumulasiUtang: isKasbon ? (totalTagihanAkhir - cashReceived) : 0,
+        akumulasiLaba: labaBersihAkhir,
+        poin: poinDidapat // Member baru langsung dapat poin
       });
     }
   }
 
   const pesananBaru = await db.insert(orders).values({
+    shiftId: shiftId || null,
     nomorHpPelanggan: noHpFix,
     tipePesanan: 'ambil_toko',
     status: 'selesai',
     statusPembayaran: isKasbon ? 'kasbon' : 'lunas',
-    totalHarga: totalBelanja,
+    totalHarga: totalTagihanAkhir, // Harga yang dicatat adalah yang sudah diskon poin
+    potonganPoin: potonganPoin,
     cashReceived: cashReceived,
     kembalian: kembalian,
   }).returning({ id: orders.id });
@@ -67,10 +77,10 @@ export async function prosesCheckout(data: any) {
   revalidatePath('/admin/piutang');
   revalidatePath('/admin/riwayat');
   revalidatePath('/admin/member');
+  revalidatePath('/admin/dashboard');
   return { success: true };
 }
 
-// Fungsi ini SUDAH menangani bayar kasbon sebagian (karena mengurangi akumulasiUtang pelanggan)
 export async function lunasiKasbon(formData: FormData) {
   const nomorHp = formData.get('nomorHp') as string;
   const nominalBayar = Number(formData.get('nominalBayar'));

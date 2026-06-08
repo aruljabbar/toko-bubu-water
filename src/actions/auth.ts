@@ -1,32 +1,30 @@
 'use server'
-
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 export async function loginDenganPin(formData: FormData) {
   const pinInput = formData.get('pin') as string;
-  const pinRahasia = process.env.ADMIN_PIN || '123456';
+  const adminPin = process.env.ADMIN_PIN || '123456';
+  const kasirPin = process.env.KASIR_PIN || '654321';
 
-  if (pinInput === pinRahasia) {
-    // Beri "kartu pas" (cookie) yang berlaku selama 30 hari
-    const cookiesStore = await cookies();
-    cookiesStore.set('auth_token', 'bubu-super-admin', {
-      httpOnly: true, // Aman dari serangan hacker/XSS
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 30, // 30 hari
-      path: '/',
-    });
-    // Jika benar, lempar ke halaman kasir
+  if (pinInput === adminPin) {
+    const cookieStore = await cookies();
+    cookieStore.set('auth_token', 'bubu-super-admin', { httpOnly: true, path: '/' });
+    cookieStore.set('user_role', 'owner', { httpOnly: true, path: '/' });
+    redirect('/admin/dashboard');
+  } else if (pinInput === kasirPin) {
+    const cookieStore = await cookies();
+    cookieStore.set('auth_token', 'bubu-super-admin', { httpOnly: true, path: '/' });
+    cookieStore.set('user_role', 'kasir', { httpOnly: true, path: '/' });
     redirect('/admin/kasir');
   } else {
-    // Lempar kembali ke login dengan kode error jika salah
     redirect('/login?error=1');
   }
 }
 
-// Fungsi untuk keluar (logout)
 export async function logoutAdmin() {
-  const cookiesStore = await cookies();
-  cookiesStore.delete('auth_token');
+  const cookieStore = await cookies();
+  cookieStore.delete('auth_token');
+  cookieStore.delete('user_role');
   redirect('/login');
 }
