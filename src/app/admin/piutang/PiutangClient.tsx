@@ -12,46 +12,46 @@ export default function PiutangClient({ pengutang, riwayatBayar, kasbonOrders }:
   const currentRiwayat = riwayatBayar.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-6">
-      <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">💰 Manajemen Piutang & Member</h1>
+    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-4 md:space-y-6">
+      <h1 className="text-xl md:text-2xl font-black text-slate-800 flex items-center gap-2">💰 Manajemen Piutang</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border">
-          <h2 className="font-bold text-base mb-4 text-rose-600 border-b pb-2">Tagihan Kasbon Berjalan</h2>
-          <ul className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+        {/* Kolom Tagihan Kasbon */}
+        <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border">
+          <h2 className="font-bold text-sm md:text-base mb-3 md:mb-4 text-rose-600 border-b pb-2">Tagihan Kasbon Berjalan</h2>
+          <ul className="space-y-3 md:space-y-4 max-h-[50vh] md:max-h-[70vh] overflow-y-auto pr-1 md:pr-2">
             {pengutang.length === 0 ? <p className="text-xs text-slate-500 text-center">Buku piutang bersih! 🎉</p> : 
               pengutang.map(p => {
-                // Cari nota yang menyebabkan utang untuk member ini
                 const riwayatKasbonMember = kasbonOrders.filter(o => o.nomorHpPelanggan === p.nomorHp);
 
                 return (
-                  <li key={p.id} className="border p-4 rounded-xl bg-slate-50 flex flex-col gap-3 hover:border-blue-300 transition">
+                  <li key={p.id} className="border p-3 md:p-4 rounded-xl bg-slate-50 flex flex-col gap-2 md:gap-3">
                     <div className="flex justify-between items-start">
                       <div>
-                        <Link href={`/admin/riwayat?hp=${p.nomorHp}`} className="font-black text-blue-600 hover:underline text-sm flex items-center gap-1">📱 {p.nomorHp} ↗</Link>
-                        <div className="text-xs text-slate-500 font-bold mt-1">👤 Member: {p.nama}</div>
+                        <Link href={`/admin/riwayat?hp=${p.nomorHp}`} className="font-black text-blue-600 hover:underline text-[11px] md:text-sm flex items-center gap-1">📱 {p.nomorHp} ↗</Link>
+                        <div className="text-[10px] md:text-xs text-slate-500 font-bold mt-1">👤 Member: {p.nama}</div>
                       </div>
-                      <div className="text-rose-600 font-black text-base bg-white px-3 py-1.5 rounded-lg border border-rose-100 shadow-sm">
+                      <div className="text-rose-600 font-black text-sm md:text-base bg-white px-2 md:px-3 py-1 md:py-1.5 rounded-lg border border-rose-100 shadow-sm">
                         Rp {p.akumulasiUtang?.toLocaleString('id-ID')}
                       </div>
                     </div>
                     
                     {riwayatKasbonMember.length > 0 && (
-                      <div className="mt-1 p-2 bg-rose-100/50 rounded border border-rose-200 text-xs text-rose-800">
+                      <div className="mt-1 p-2 bg-rose-100/50 rounded border border-rose-200 text-[10px] md:text-xs text-rose-800">
                         <strong className="block mb-1">Riwayat Nota Kasbon:</strong>
                         <ul className="list-disc ml-4 space-y-0.5">
                           {riwayatKasbonMember.map(o => (
                             <li key={o.id}>Nota #{o.id} - Hutang Awal: Rp {(o.totalHarga - o.cashReceived).toLocaleString('id-ID')}</li>
                           ))}
                         </ul>
-                        <div className="text-[9px] text-rose-500 mt-1 italic">*Total hutang di atas dapat berkurang jika member pernah mencicil sebagian.</div>
+                        <div className="text-[8px] md:text-[9px] text-rose-500 mt-1 italic">*Hutang dapat berkurang jika member pernah mencicil.</div>
                       </div>
                     )}
 
                     <form action={lunasiKasbon} className="flex gap-2">
                       <input type="hidden" name="nomorHp" value={p.nomorHp} />
-                      <input type="number" name="nominalBayar" required placeholder="Masukan nominal pelunasan..." className="border p-2 rounded-lg text-sm flex-1 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold" />
-                      <button type="submit" className="bg-emerald-600 text-white font-bold px-4 rounded-lg text-xs hover:bg-emerald-700 transition shadow">Terima Uang</button>
+                      <input type="number" name="nominalBayar" required placeholder="Nominal lunas..." className="border p-1.5 md:p-2 rounded-lg text-xs md:text-sm flex-1 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold" />
+                      <button type="submit" className="bg-emerald-600 text-white font-bold px-3 md:px-4 rounded-lg text-[10px] md:text-xs hover:bg-emerald-700 shadow">Terima Uang</button>
                     </form>
                   </li>
                 )
@@ -60,28 +60,31 @@ export default function PiutangClient({ pengutang, riwayatBayar, kasbonOrders }:
           </ul>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border flex flex-col h-fit">
-          <h2 className="font-bold text-base mb-4 text-emerald-600 border-b pb-2">Riwayat Setoran Pembayaran</h2>
-          <table className="min-w-full text-xs text-left">
-            <thead>
-              <tr className="text-slate-400 font-bold"><th className="pb-3">Waktu (WIB)</th><th className="pb-3">No. HP Pelanggan</th><th className="pb-3 text-right">Nominal Masuk</th></tr>
-            </thead>
-            <tbody>
-              {currentRiwayat.map(r => (
-                <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
-                  <td className="py-3 text-slate-500">{new Date(r.tanggalBayar!).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'short' })}</td>
-                  <td className="py-3 font-bold text-slate-700">{r.nomorHpPelanggan}</td>
-                  <td className="py-3 text-right text-emerald-600 font-black">+Rp {r.nominalBayar.toLocaleString('id-ID')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Kolom Riwayat Setoran */}
+        <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border flex flex-col h-fit">
+          <h2 className="font-bold text-sm md:text-base mb-3 md:mb-4 text-emerald-600 border-b pb-2">Riwayat Setoran Pembayaran</h2>
+          <div className="overflow-x-auto w-full">
+            <table className="min-w-full text-[10px] md:text-xs text-left whitespace-nowrap">
+              <thead>
+                <tr className="text-slate-400 font-bold"><th className="pb-2 md:pb-3 pr-4">Waktu (WIB)</th><th className="pb-2 md:pb-3 pr-4">No. HP Pelanggan</th><th className="pb-2 md:pb-3 text-right">Nominal Masuk</th></tr>
+              </thead>
+              <tbody>
+                {currentRiwayat.map(r => (
+                  <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
+                    <td className="py-2 md:py-3 text-slate-500 pr-4">{new Date(r.tanggalBayar!).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'short' })}</td>
+                    <td className="py-2 md:py-3 font-bold text-slate-700 pr-4">{r.nomorHpPelanggan}</td>
+                    <td className="py-2 md:py-3 text-right text-emerald-600 font-black">+Rp {r.nominalBayar.toLocaleString('id-ID')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           
           {totalPages > 1 && (
-            <div className="flex justify-between items-center mt-6 pt-4 border-t">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 bg-slate-100 rounded font-bold text-xs disabled:opacity-50 text-slate-600">Prev</button>
-              <span className="text-xs font-bold text-slate-400">Hal {page} / {totalPages}</span>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 bg-slate-100 rounded font-bold text-xs disabled:opacity-50 text-slate-600">Next</button>
+            <div className="flex justify-between items-center mt-4 md:mt-6 pt-3 md:pt-4 border-t">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-2 md:px-3 py-1 bg-slate-100 rounded font-bold text-[10px] md:text-xs disabled:opacity-50 text-slate-600">Prev</button>
+              <span className="text-[10px] md:text-xs font-bold text-slate-400">Hal {page} / {totalPages}</span>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-2 md:px-3 py-1 bg-slate-100 rounded font-bold text-[10px] md:text-xs disabled:opacity-50 text-slate-600">Next</button>
             </div>
           )}
         </div>
