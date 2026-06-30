@@ -1,117 +1,106 @@
 'use client'
-
 import { useState } from 'react';
+import { hapusNotaDanRetur, hapusItemNota } from '../../../actions/kasir';
 
-export default function RiwayatClient({ data, initialHp }: { data: any[], initialHp: string }) {
+export default function RiwayatClient({ data, initialHp, userRole }: any) {
   const [search, setSearch] = useState(initialHp || '');
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
   const [expandedIds, setExpandedIds] = useState<number[]>([]);
 
-  const toggleExpand = (id: number) => {
-    setExpandedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
-
-  const filtered = data.filter(d => 
-    d.nomorHpPelanggan.includes(search) || 
-    d.id.toString().includes(search) ||
-    d.namaPelanggan.toLowerCase().includes(search.toLowerCase())
-  );
-
+  const filtered = data.filter((d:any) => d.nomorHpPelanggan.includes(search) || d.id.toString().includes(search) || d.namaPelanggan.toLowerCase().includes(search.toLowerCase()));
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const currentData = filtered.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-4 md:space-y-6">
-      <h1 className="text-xl md:text-2xl font-black text-slate-800 flex items-center gap-2">📜 Riwayat Laba & Nota POS</h1>
+    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-4">
+      <h1 className="text-xl md:text-2xl font-black text-slate-800">📜 Buku Riwayat Nota</h1>
       
-      <div className="bg-white p-4 rounded-xl shadow-sm border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <input 
-          type="text" placeholder="🔍 Cari ID Nota, No HP, atau Nama Pelanggan..." 
-          value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} 
-          className="w-full sm:w-96 border rounded-lg p-2 md:p-2.5 text-xs md:text-sm focus:ring-2 focus:ring-blue-500" 
-        />
-        <div className="text-[10px] md:text-xs font-bold text-slate-500">Total Transaksi: {filtered.length} Nota</div>
+      <div className="bg-white p-3 rounded-xl shadow-sm border flex gap-3">
+        <input type="text" placeholder="🔍 Cari ID Nota atau Nama Pelanggan..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="w-full border rounded-lg p-3 text-sm font-bold bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
 
       <div className="space-y-4">
-        {currentData.length === 0 ? (
-          <p className="text-slate-400 text-center py-12 bg-white rounded-xl border text-sm">Tidak ditemukan riwayat transaksi.</p>
-        ) : (
-          currentData.map((order) => {
+        {currentData.length === 0 ? <p className="text-center py-8 bg-white rounded-xl border text-sm font-bold text-slate-400">Tidak ada riwayat.</p> : 
+          currentData.map((order:any) => {
             const isExpanded = expandedIds.includes(order.id);
-            const itemsToShow = isExpanded ? order.items : order.items.slice(0, 3);
-            const sisaItem = order.items.length - 3;
-            
-            const totalProfit = order.items.reduce((acc: number, item: any) => acc + ((item.hargaSatuan - item.modalSatuan) * item.kuantitas), 0);
+            const totalProfit = order.items.reduce((acc:number, item:any) => acc + ((item.hargaSatuan - item.modalSatuan) * item.kuantitas), 0);
 
             return (
-              <div key={order.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                <div className="bg-slate-50 px-3 md:px-4 py-3 border-b flex flex-col sm:flex-row justify-between sm:items-center text-[10px] md:text-xs font-bold text-slate-600 gap-2">
-                  <div className="flex flex-wrap gap-2 sm:gap-4 items-center">
-                    <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">NOTA: #{order.id}</span>
-                    <span>🕒 {new Date(order.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</span>
-                    <span>👤 {order.namaPelanggan} ({order.nomorHpPelanggan})</span>
+              <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-slate-100 px-4 py-3 flex justify-between items-center border-b">
+                  <div>
+                    <div className="text-base font-black text-blue-700">Nota #{order.id}</div>
+                    <div className="text-xs font-bold text-slate-500">{new Date(order.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</div>
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-[9px] md:text-[10px] text-white uppercase w-fit ${order.statusPembayaran === 'lunas' ? 'bg-emerald-500' : 'bg-rose-500'}`}>
-                    {order.statusPembayaran}
-                  </span>
+                  <div className="text-right">
+                    <div className="text-sm font-black text-slate-800 uppercase">{order.namaPelanggan}</div>
+                    <div className={`text-[10px] font-black px-2 py-0.5 rounded uppercase mt-1 inline-block ${order.statusPembayaran === 'lunas' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>{order.statusPembayaran}</div>
+                  </div>
                 </div>
 
-                <div className="p-3 md:p-4 overflow-x-auto">
-                  <table className="w-full text-[10px] md:text-xs text-left text-slate-600 min-w-[400px]">
-                    <thead>
-                      <tr className="border-b text-slate-400 font-bold">
-                        <th className="pb-2">Nama Barang</th><th className="pb-2 text-center w-12 md:w-16">Qty</th><th className="pb-2 text-right">Harga Jual / Modal</th><th className="pb-2 text-right text-emerald-600">Laba Bersih</th>
+                <div className="p-4 overflow-x-auto">
+                  <table className="w-full text-xs text-left min-w-[400px]">
+                    <thead className="border-b-2 border-slate-200 text-slate-500 font-black">
+                      <tr>
+                        <th className="pb-2">Barang</th><th className="pb-2 text-center">Qty</th><th className="pb-2 text-right">Harga</th><th className="pb-2 text-right">Subtotal</th>
+                        {userRole === 'owner' && <th className="pb-2 text-center w-12">Retur</th>}
                       </tr>
                     </thead>
-                    <tbody>
-                      {itemsToShow.map((item: any) => (
-                        <tr key={item.id} className="border-b border-slate-50 last:border-0">
-                          <td className="py-2 font-semibold text-slate-700 whitespace-nowrap">{item.namaProduk}</td>
-                          <td className="py-2 text-center font-bold bg-slate-50 rounded">{item.kuantitas}</td>
-                          <td className="py-2 text-right whitespace-nowrap">
-                            <div className="text-emerald-700 font-bold">J: Rp {item.hargaSatuan.toLocaleString('id-ID')}</div>
-                            <div className="text-[9px] md:text-[10px] text-rose-500 font-semibold">M: Rp {item.modalSatuan.toLocaleString('id-ID')}</div>
-                          </td>
-                          <td className="py-2 text-right text-emerald-600 font-black whitespace-nowrap">+Rp {((item.hargaSatuan - item.modalSatuan) * item.kuantitas).toLocaleString('id-ID')}</td>
+                    <tbody className="divide-y divide-slate-100 font-bold text-slate-700">
+                      {(isExpanded ? order.items : order.items.slice(0, 2)).map((item: any) => (
+                        <tr key={item.id}>
+                          <td className="py-2">{item.namaProduk}</td>
+                          <td className="py-2 text-center bg-slate-50">{item.kuantitas}</td>
+                          <td className="py-2 text-right">Rp {item.hargaSatuan.toLocaleString('id-ID')}</td>
+                          <td className="py-2 text-right text-emerald-700">Rp {(item.hargaSatuan * item.kuantitas).toLocaleString('id-ID')}</td>
+                          {userRole === 'owner' && (
+                            <td className="py-2 text-center">
+                              {/* PERBAIKAN: Gunakan onClick untuk preventDefault konfirmasi agar Next.js Action jalan lancar */}
+                              <form action={hapusItemNota}>
+                                <input type="hidden" name="orderId" value={order.id} />
+                                <input type="hidden" name="itemId" value={item.id} />
+                                <button type="submit" onClick={e => { if(!confirm(`Retur ${item.namaProduk}? Stok otomatis kembali dan tagihan disesuaikan!`)) e.preventDefault(); }} className="bg-rose-500 text-white rounded px-2.5 py-1 text-[9px] font-black shadow hover:bg-rose-600 transition">X</button>
+                              </form>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  {sisaItem > 0 && (
-                    <button onClick={() => toggleExpand(order.id)} className="w-full mt-2 py-1.5 bg-slate-100 text-slate-600 text-[10px] md:text-xs font-bold rounded-lg hover:bg-slate-200 transition">
-                      {isExpanded ? 'Sembunyikan' : `Tampilkan ${sisaItem} Item Lainnya ⬇️`}
+                  {order.items.length > 2 && (
+                    <button onClick={() => setExpandedIds(p => p.includes(order.id) ? p.filter(x => x !== order.id) : [...p, order.id])} className="w-full mt-3 py-2 bg-blue-50 text-blue-700 text-xs font-black rounded-xl hover:bg-blue-100 transition">
+                      {isExpanded ? 'Tutup Detail' : `Buka ${order.items.length - 2} Barang Lainnya ⬇️`}
                     </button>
                   )}
                 </div>
 
-                <div className="bg-slate-50/50 px-3 md:px-4 py-2.5 border-t flex flex-col sm:flex-row justify-between sm:items-center text-[10px] md:text-xs font-bold gap-2">
-                  <div className="text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 shadow-sm w-fit">
-                    Total Laba: +Rp {totalProfit.toLocaleString('id-ID')}
-                  </div>
-                  <div className="text-slate-800 text-xs md:text-sm sm:text-right flex flex-col">
-                    <div>
-                      Omzet: <span className="text-blue-600 font-black">Rp {order.totalHarga.toLocaleString('id-ID')}</span>
-                    </div>
-                    {order.statusPembayaran === 'kasbon' && (
-                      <div className="text-[9px] md:text-[10px] text-rose-600 mt-0.5">
-                        (Dibayar: Rp {order.cashReceived.toLocaleString('id-ID')} | Kasbon: Rp {(order.totalHarga - order.cashReceived).toLocaleString('id-ID')})
-                      </div>
+                <div className="bg-slate-50 px-4 py-3 border-t flex flex-wrap justify-between items-center gap-3">
+                  <div className="text-xs md:text-sm font-black text-slate-800">TOTAL: <span className="text-blue-700 text-lg md:text-xl">Rp {order.totalHarga.toLocaleString('id-ID')}</span></div>
+                  
+                  <div className="flex gap-2 items-center">
+                    {userRole === 'owner' && (
+                      <>
+                        <div className="text-[10px] text-emerald-600 font-black bg-emerald-100 px-2 py-1 rounded">Laba: +Rp {totalProfit.toLocaleString('id-ID')}</div>
+                        <form action={hapusNotaDanRetur}>
+                          <input type="hidden" name="orderId" value={order.id} />
+                          <button type="submit" onClick={e => { if(!confirm('YAKIN HAPUS KESELURUHAN NOTA INI? Stok barang akan otomatis dikembalikan ke gudang!')) e.preventDefault(); }} className="bg-rose-600 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow hover:bg-rose-700">HAPUS NOTA & RETUR</button>
+                        </form>
+                      </>
                     )}
                   </div>
                 </div>
               </div>
             );
           })
-        )}
+        }
       </div>
 
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-6">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 md:px-4 py-1.5 md:py-2 bg-white border rounded-lg font-bold text-xs md:text-sm disabled:opacity-50">⬅️ Prev</button>
-          <span className="px-3 md:px-4 py-1.5 md:py-2 font-bold text-xs md:text-sm text-slate-600">Hal {page} / {totalPages}</span>
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 md:px-4 py-1.5 md:py-2 bg-white border rounded-lg font-bold text-xs md:text-sm disabled:opacity-50">Next ➡️</button>
+        <div className="flex justify-between items-center bg-white p-3 rounded-xl border font-black text-xs">
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 bg-slate-100 rounded-lg disabled:opacity-50">KEMBALI</button>
+          <span>HALAMAN {page} / {totalPages}</span>
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 bg-slate-100 rounded-lg disabled:opacity-50">LANJUT</button>
         </div>
       )}
     </div>

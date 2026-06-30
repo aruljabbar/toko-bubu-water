@@ -12,7 +12,8 @@ export default function KatalogClient({ katalog }: { katalog: Product[] }) {
   const [search, setSearch] = useState('');
   const [kategori, setKategori] = useState('Semua');
 
-  const kategoriList = ['Semua', ...Array.from(new Set(katalog.map(p => p.kategori).filter(Boolean)))];
+  // FIXED: Deklarasi string[] yang tegas
+  const kategoriList: string[] = ['Semua', ...Array.from(new Set(katalog.map(p => p.kategori).filter(Boolean))) as string[]];
 
   const filtered = katalog.filter(p => {
     const matchSearch = p.namaProduk.toLowerCase().includes(search.toLowerCase()) || p.kategori?.toLowerCase().includes(search.toLowerCase());
@@ -41,7 +42,7 @@ export default function KatalogClient({ katalog }: { katalog: Product[] }) {
           <div className="flex gap-2 flex-wrap justify-center w-full md:w-auto">
             {kategoriList.map(kat => (
               <button 
-                key={kat} onClick={() => setKategori(kat!)}
+                key={kat} onClick={() => setKategori(kat)}
                 className={`px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition whitespace-nowrap ${kategori === kat ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
               >
                 {kat}

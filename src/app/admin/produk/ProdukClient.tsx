@@ -9,10 +9,11 @@ export default function ProdukClient({ daftarProduk, userRole }: { daftarProduk:
   const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
   const [editData, setEditData] = useState<any>(null);
 
-  const listKategori = Array.from(new Set(daftarProduk.map(p => p.kategori).filter(Boolean)));
-  const listSatuan = Array.from(new Set(daftarProduk.map(p => p.satuan).filter(Boolean)));
+  // FIXED: Deklarasi string[] yang tegas
+  const listKategori: string[] = Array.from(new Set(daftarProduk.map((p:any) => p.kategori).filter(Boolean))) as string[];
+  const listSatuan: string[] = Array.from(new Set(daftarProduk.map((p:any) => p.satuan).filter(Boolean))) as string[];
   
-  const produkTampil = daftarProduk.filter(p => 
+  const produkTampil = daftarProduk.filter((p:any) => 
     p.namaProduk.toLowerCase().includes(searchQuery.toLowerCase()) || 
     p.barcode?.includes(searchQuery) || 
     p.kategori?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -46,12 +47,13 @@ export default function ProdukClient({ daftarProduk, userRole }: { daftarProduk:
               <div>
                 <label className="block text-[10px] md:text-xs font-bold text-slate-500 mb-1">Satuan</label>
                 <input list="admin-satuan-list" name="satuan" className="w-full border rounded-lg p-2 text-sm bg-white" defaultValue="pcs" />
-                <datalist id="admin-satuan-list">{listSatuan.map(s => <option key={s as string} value={s as string} />)}</datalist>
+                <datalist id="admin-satuan-list">{listSatuan.map(s => <option key={s} value={s} />)}</datalist>
               </div>
               <div>
+                {/* FIXED: Kategori sekarang required */}
                 <label className="block text-[10px] md:text-xs font-bold text-slate-500 mb-1">Kategori</label>
-                <input list="admin-kategori-list" name="kategori" className="w-full border rounded-lg p-2 text-sm" />
-                <datalist id="admin-kategori-list">{listKategori.map(k => <option key={k as string} value={k as string} />)}</datalist>
+                <input list="admin-kategori-list" name="kategori" required className="w-full border rounded-lg p-2 text-sm" />
+                <datalist id="admin-kategori-list">{listKategori.map(k => <option key={k} value={k} />)}</datalist>
               </div>
               <div className="col-span-2 lg:col-span-1"><label className="block text-[10px] md:text-xs font-bold text-slate-500 mb-1">URL Gambar</label><input type="url" name="gambarUrl" className="w-full border rounded-lg p-2 text-sm" /></div>
             </div>
@@ -82,7 +84,7 @@ export default function ProdukClient({ daftarProduk, userRole }: { daftarProduk:
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {produkTampil.map((p) => (
+              {produkTampil.map((p:any) => (
                 <tr key={p.id} className="hover:bg-slate-50/50">
                   <td className="px-3 md:px-4 py-3 flex gap-2 md:gap-3 items-center min-w-[200px]">
                     {p.gambarUrl ? <img src={p.gambarUrl} className="w-8 h-8 md:w-10 md:h-10 object-cover rounded-lg border shrink-0" /> : <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 rounded-lg flex items-center justify-center text-[8px] md:text-[10px] text-slate-400 shrink-0">No Img</div>}
@@ -101,7 +103,7 @@ export default function ProdukClient({ daftarProduk, userRole }: { daftarProduk:
                   
                   <td className="px-3 md:px-4 py-3">
                     <div className="text-xs md:text-sm text-emerald-600 font-black">Rp {p.harga.toLocaleString('id-ID')}</div>
-                    {p.hargaGrosir && <div className="text-[9px] md:text-[10px] text-slate-500 font-bold mt-0.5">Grosir: Rp {p.hargaGrosir.toLocaleString('id-ID')}</div>}
+                    {p.hargaGrosir && <div className="text-[9px] md:text-[10px] text-slate-500 font-bold mt-0.5">Grosir: Rp {p.hargaGrosir.toLocaleString('id-ID')} (Min {p.minGrosir})</div>}
                   </td>
                   <td className="px-3 md:px-4 py-3 text-center font-bold text-sm md:text-base">{p.stok}</td>
                   
@@ -157,7 +159,7 @@ export default function ProdukClient({ daftarProduk, userRole }: { daftarProduk:
                 <div><label className="text-[10px] md:text-xs font-bold text-rose-600">Harga Modal Grosir</label><input type="number" name="hargaModalGrosir" defaultValue={editData.hargaModalGrosir || ''} className="w-full border rounded p-1.5 md:p-2 text-sm" /></div>
                 <div><label className="text-[10px] md:text-xs font-bold text-emerald-600">Harga Jual Grosir</label><input type="number" name="hargaGrosir" defaultValue={editData.hargaGrosir || ''} className="w-full border rounded p-1.5 md:p-2 text-sm" /></div>
                 <div><label className="text-[10px] md:text-xs font-bold">Satuan</label><input list="admin-satuan-list" name="satuan" defaultValue={editData.satuan} className="w-full border rounded p-1.5 md:p-2 text-sm" /></div>
-                <div><label className="text-[10px] md:text-xs font-bold">Kategori</label><input type="text" name="kategori" defaultValue={editData.kategori || ''} className="w-full border rounded p-1.5 md:p-2 text-sm" /></div>
+                <div><label className="text-[10px] md:text-xs font-bold">Kategori</label><input type="text" name="kategori" required defaultValue={editData.kategori || ''} className="w-full border rounded p-1.5 md:p-2 text-sm" /></div>
                 <div><label className="text-[10px] md:text-xs font-bold">Min Beli Grosir</label><input type="number" name="minGrosir" defaultValue={editData.minGrosir || ''} className="w-full border rounded p-1.5 md:p-2 text-sm" /></div>
                 <div><label className="text-[10px] md:text-xs font-bold">URL Gambar</label><input type="url" name="gambarUrl" defaultValue={editData.gambarUrl || ''} className="w-full border rounded p-1.5 md:p-2 text-sm" /></div>
               </div>

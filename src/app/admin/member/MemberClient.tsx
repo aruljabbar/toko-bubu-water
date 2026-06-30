@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { tambahMember, editMember, hapusMember } from '../../../actions/member';
 import Link from 'next/link';
 
-export default function MemberClient({ daftarMember }: { daftarMember: any[] }) {
+export default function MemberClient({ daftarMember, userRole }: { daftarMember: any[]; userRole: string }) {
   const [search, setSearch] = useState('');
   const [editData, setEditData] = useState<any>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -45,13 +45,17 @@ export default function MemberClient({ daftarMember }: { daftarMember: any[] }) 
                   <td className="px-3 md:px-4 py-2 md:py-3 text-right font-bold text-slate-600 whitespace-nowrap">Rp {m.akumulasiBelanja.toLocaleString('id-ID')}</td>
                   <td className="px-3 md:px-4 py-2 md:py-3 text-right font-black text-emerald-600 whitespace-nowrap">+Rp {(m.akumulasiLaba || 0).toLocaleString('id-ID')}</td>
                   <td className="px-3 md:px-4 py-2 md:py-3 flex justify-center gap-1.5 md:gap-2">
-                    <Link href={`/admin/riwayat?hp=${m.nomorHp}`} className="bg-slate-100 text-slate-600 px-2 md:px-3 py-1 md:py-1.5 rounded text-[10px] md:text-xs font-bold hover:bg-slate-200">Riwayat</Link>
+                    {userRole === 'owner' && (
+                      <Link href={`/admin/riwayat?hp=${m.nomorHp}`} className="bg-slate-100 text-slate-600 px-2 md:px-3 py-1 md:py-1.5 rounded text-[10px] md:text-xs font-bold hover:bg-slate-200">Riwayat</Link>
+                    )}
                     <button onClick={() => setEditData(m)} className="bg-blue-50 text-blue-600 px-2 md:px-3 py-1 md:py-1.5 rounded text-[10px] md:text-xs font-bold hover:bg-blue-100">Edit</button>
-                    <form action={hapusMember} onSubmit={e => { if(!confirm('Hapus member ini?')) e.preventDefault(); }}>
-                      <input type="hidden" name="id" value={m.id} />
-                      <button type="submit" className="bg-rose-50 text-rose-600 px-2 md:px-3 py-1 md:py-1.5 rounded text-[10px] md:text-xs font-bold hover:bg-rose-100">Hapus</button>
-                    </form>
-                  </td>
+                    {userRole === 'owner' && (
+                      <form action={hapusMember} onSubmit={e => { if(!confirm('Hapus member ini?')) e.preventDefault(); }}>
+                          <input type="hidden" name="id" value={m.id} />
+                          <button type="submit" className="bg-rose-50 text-rose-600 px-2 md:px-3 py-1 md:py-1.5 rounded text-[10px] md:text-xs font-bold hover:bg-rose-100">Hapus</button>
+                      </form>
+                    )}
+                  </td>                
                 </tr>
               ))}
             </tbody>
